@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+httpx
+python-multipart
+redis
+pillow
+pydantic
+jinja2
+openai
+numpy
+opencv-python-headless

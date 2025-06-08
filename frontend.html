@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="icon" href="static/images/skincare.png" type="image/png">
+    <title>CI-OCR</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+
+        /* Main content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #f5f5f5;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #eee;
+        }
+
+        .header-icons {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .notification-icon {
+            color: #ff9800;
+        }
+
+        .settings-icon {
+            color: #4CAF50;
+        }
+
+        .search-box {
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            width: 200px;
+            margin-left: 10px;
+        }
+
+        /* Content container */
+        .content-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Left panel - OCR section */
+        .ocr-section {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            background-color: white;
+            overflow-y: auto;
+        }
+
+        /* Upload Container - Styled like the image */
+        .upload-container {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: white;
+        }
+
+        .upload-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .upload-title {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .close-btn {
+            cursor: pointer;
+            color: #666;
+        }
+
+        .upload-info {
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+
+        /* Upload area - Styled like the image */
+        .upload-area {
+            border: 1px dashed #ccc;
+            border-radius: 4px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-bottom: 10px;
+            background-color: #fafafa;
+            min-height: 120px;
+        }
+
+        .upload-icon {
+            color: #0e6e31;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            color: #555;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .upload-footer {
+            color: #888;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        /* Uploaded file display - Styled like the image */
+        .uploaded-file-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .file-thumbnail {
+            width: 36px;
+            height: 36px;
+            object-fit: cover;
+            margin-right: 10px;
+            border-radius: 2px;
+        }
+
+        .file-info {
+            flex: 1;
+            font-size: 14px;
+            color: #0e6e31;
+            display: flex;
+            align-items: center;
+        }
+
+        .file-status {
+            margin-left: auto;
+            color: #0e6e31;
+        }
+
+        .result-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .result-section {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .result-header {
+            background-color: #f5f5f5;
+            padding: 10px 15px;
+            font-weight: 500;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #555;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .copy-btn:hover {
+            color: #0e6e31;
+        }
+
+        .copy-icon {
+            margin-right: 4px;
+        }
+
+        .copy-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .copy-tooltip.show {
+            opacity: 1;
+        }
+
+        .result-content {
+            padding: 15px;
+            min-height: 300px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background-color: #f9f9f9;
+        }
+
+        .annotated-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border: 1px solid #eee;
+        }
+
+        .extracted-text {
+            font-family: monospace;
+            white-space: pre-wrap;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            overflow-y: auto;
+            max-height: 200px;
+            width: 100%;
+            color: #333;
+            user-select: text; /* Explicit permission to select text */
+            cursor: text;      /* Show text cursor */
+        }
+
+        .export-csv-button {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .export-csv-button:hover {
+            background: #45a049;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+
+        /* Right panel - Chat section */
+        .chat-section {
+            width: 50%;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #eee;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 15px;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        /* Thay đổi CSS cho message-content */
+        .message-content {
+            max-width: 80%;
+            padding: 12px 15px;
+            border-radius: 18px;
+            position: relative;
+            min-width: 120px; /* Thêm min-width để tránh quá nhỏ */
+            width: auto; /* Cho phép độ rộng tự động điều chỉnh */
+            overflow-wrap: break-word; /* Đảm bảo văn bản dài tự động xuống dòng */
+            word-wrap: break-word; /* Hỗ trợ tương thích với trình duyệt cũ */
+            hyphens: auto; /* Cho phép ngắt từ khi cần thiết */
+        }
+
+        /* Đảm bảo nội dung bảng không bị tràn */
+        .message-content table {
+            max-width: 100%;
+            table-layout: fixed; /* Cố định layout bảng */
+            overflow-x: auto; /* Cho phép cuộn ngang nếu bảng quá rộng */
+            display: block; /* Chuyển sang hiển thị block để overflow-x hoạt động */
+        }
+
+        /* Chiều rộng cột được định nghĩa bởi nội dung trong cột đầu tiên */
+        .message-content th,
+        .message-content td {
+            word-break: break-word; /* Cho phép ngắt từ trong ô bảng */
+            overflow-wrap: break-word;
+            padding: 8px;
+            vertical-align: top;
+        }
+
+        .user .message-content {
+            background-color: #0e6e31;
+            color: white;
+            border-top-right-radius: 5px;
+        }
+
+        .bot .message-content {
+            background-color: #f0f0f0;
+            color: #333;
+            border-top-left-radius: 5px; /* Rounded top left corner */
+        }
+        /* Thêm vào phần <style> của bạn */
+        /* CSS cho markdown-content */
+        .markdown-content {
+            padding: 10px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            line-height: 1.6;
+            white-space: normal;
+            overflow-wrap: break-word;
+        }
+
+        /* Styling cho headings */
+        .markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4 {
+            font-weight: bold;
+            color: #0e6e31;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            clear: both;
+        }
+
+        .markdown-content h1 {
+            font-size: 1.4em;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+        }
+        
+        .markdown-content h2 {
+            font-size: 1.3em;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        
+        .markdown-content h3 {
+            font-size: 1.2em;
+        }
+
+        .markdown-content h4 {
+            font-size: 1.1em;
+        }
+
+        /* Styling cho văn bản */
+        .markdown-content p {
+            margin-bottom: 10px;
+        }
+        
+        /* Styling cho văn bản in đậm */
+        .markdown-content strong {
+            font-weight: bold;
+            color: #0e6e31;
+            background-color: rgba(14, 110, 49, 0.05);
+            padding: 0 3px;
+            border-radius: 3px;
+        }
+
+        /* Styling cho danh sách */
+        .markdown-content ul,
+        .markdown-content ol {
+            list-style-position: outside;
+            margin-left: 20px;
+            margin-bottom: 15px;
+            padding-left: 15px;
+        }
+
+        .markdown-content ul {
+            list-style-type: disc;
+        }
+        
+        .markdown-content ol {
+            list-style-type: decimal;
+        }
+
+        .markdown-content li {
+            margin-bottom: 8px;
+            display: list-item;
+        }
+
+        /* Styling cho emoji indicators */
+        .markdown-content li:has(span.emoji) {
+            padding-left: 5px;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .markdown-content span.emoji {
+            margin-right: 8px;
+            font-size: 1.2em;
+        }
+
+        /* Thêm khoảng cách giữa các phần */
+        .markdown-content h2 + ul,
+        .markdown-content h3 + ul {
+            margin-top: 10px;
+        }
+
+        /* Styling cho phần SKIN TYPES */
+        .markdown-content h3:contains("PHÙ HỢP VỚI LOẠI DA NÀO") + ul li,
+        .markdown-content h3:contains("SKIN_TYPES") + ul li {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        /* Styling cho WARNINGS */
+        .markdown-content h3:contains("CẢNH BÁO") + ul li,
+        .markdown-content h3:contains("WARNINGS") + ul li {
+            color: #e67e22;
+        }
+
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin: 0 8px;
+            background-color: #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #666;
+            overflow: hidden; 
+        }
+
+        .bot-avatar {
+            background-color: transparent; 
+        }
+
+        .bot-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; 
+        }
+
+        .chat-input-container {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            resize: none;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .send-button {
+            margin-left: 10px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #0e6e31;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Modal overlay - For background dimming */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+            z-index: 999;
+            display: none;
+        }
+
+        /* Model selection dialog */
+        .model-selection {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            display: none;
+        }
+
+        .model-header {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .model-title {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .model-subtitle {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .model-options {
+            padding: 10px 0;
+        }
+
+        .model-option-container {
+            background-color: white;
+            border-radius: 5px;
+            overflow: hidden;
+            position: absolute;
+            top: 100%;
+            width: 100%;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1001;
+            display: none;
+        }
+
+        .model-option {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .model-option:hover {
+            background-color: #f5f5f5;
+        }
+
+        .model-option.selected {
+            background-color: #e8f4eb;
+        }
+
+        .model-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .model-footer {
+            padding: 15px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            border-top: 1px solid #eee;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            border: none;
+        }
+
+        /* Button styles */
+        .btn-secondary {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-primary {
+            background-color: #0e6e31;
+            color: white;
+        }
+
+        /* Processing indicator */
+        .processing-indicator {
+            width: 100%;
+            height: 5px;
+            background-color: #f0f0f0;
+            margin-top: 10px;
+            border-radius: 3px;
+            overflow: hidden;
+            display: none;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        /* Utility classes */
+        .hidden {
+            display: none;
+        }
+
+        .check-icon {
+            color: #0e6e31;
+            margin-left: 5px;
+        }
+
+        .header-export-csv-button {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        }
+
+        .header-export-csv-button:hover {
+            background: #45a049;
+        }
+
+        .header-export-csv-button svg {
+            margin-right: 4px;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-icons">
+                <button class="header-export-csv-button" id="header-export-csv-btn" title="Export to CSV">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Export CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- Content Container -->
+        <div class="content-container">
+            <!-- Left panel - OCR section -->
+            <div class="ocr-section">
+                <!-- Upload Container -->
+                <div class="upload-container">
+                    <div class="upload-header">
+                        <div class="upload-title">Image Upload</div>
+                        <div class="close-btn">×</div>
+                    </div>
+                    <div class="upload-info">Add your documents here, and you can upload up to 5 files max</div>
+                    
+                    <div class="upload-area" id="upload-area">
+                        <div class="upload-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                            </svg>
+                        </div>
+                        <div class="upload-text">Drag your image(s) to browse</div>
+                    </div>
+                    
+                    <div class="upload-footer">Only support .jpg, .png and .jpeg</div>
+
+                    <!-- Uploaded file display (initially hidden) -->
+                    <div id="uploaded-files-container" class="hidden">
+                        <div class="uploaded-file-row" id="uploaded-file-template">
+                            <img src="" class="file-thumbnail" id="file-thumbnail">
+                            <div class="file-info">
+                                <span id="file-name">IMG_1841.jpeg</span>
+                            </div>
+                            <div class="file-status">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Container (hidden initially) -->
+                <div class="result-container hidden" id="result-container">
+                    <!-- Annotated Image Section -->
+                    <div class="result-section">
+                        <div class="result-header">
+                            <span>Annotations Image</span>
+                        </div>
+                        <div class="result-content">
+                            <img src="" class="annotated-image" id="annotated-image">
+                        </div>
+                    </div>
+
+                    <!-- Extracted Text Section -->
+                    <div class="result-section">
+                        <div class="result-header">
+                            <span>Extracted Text</span>
+                            <div class="header-actions">
+                                <div class="result-actions">
+                                    <button class="copy-button" id="copy-text-btn" title="Copy text">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                    </button>
+                                    <button class="export-csv-button" id="export-csv-btn" title="Export to CSV" style="display: none;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="7 10 12 15 17 10"></polyline>
+                                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                                        </svg>
+                                        Export CSV
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-content">
+                            <div class="extracted-text" id="extracted-text"></div>
+                            <div class="copy-tooltip" id="copy-tooltip">Copied!</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right panel - Chat section -->
+            <div class="chat-section">
+                <!-- Đặt chat-messages trước -->
+                <div class="chat-messages" id="chat-messages">
+                    <!-- Nội dung tin nhắn sẽ được thêm vào đây bởi JavaScript -->
+                </div>
+                
+                <!-- Đặt chat-input-container sau -->
+                <div class="chat-input-container">
+                    <textarea class="chat-input" placeholder="Type a new message here" id="chat-input"></textarea>
+                    <button class="send-button" id="send-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing indicator -->
+        <div class="processing-indicator" id="processing-indicator">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- Modal overlay for background dimming -->
+    <div class="modal-overlay" id="modal-overlay"></div>
+
+    <!-- Model Selection Dialog -->
+    <div class="model-selection" id="model-selection">
+        <div class="model-header">
+            <div class="model-title">OCR Model</div>
+            <div class="model-subtitle">Select OCR model</div>
+        </div>
+        <div style="padding: 15px;">
+            <select class="model-select" id="model-select">
+                <option value="" disabled selected>Select</option>
+                <option value="DocTR">DocTR</option>
+                <option value="TrOCR">TrOCR</option>
+                <option value="MMOCR">MMOCR</option>
+            </select>
+        </div>
+        <div class="model-footer">
+            <button class="btn btn-secondary" id="cancel-btn">Cancel</button>
+            <button class="btn btn-primary" id="process-btn">Process Image</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const uploadArea = document.getElementById('upload-area');
+        const uploadedFilesContainer = document.getElementById('uploaded-files-container');
+        const uploadedFileTemplate = document.getElementById('uploaded-file-template');
+        const fileThumbnail = document.getElementById('file-thumbnail');
+        const fileName = document.getElementById('file-name');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modelSelection = document.getElementById('model-selection');
+        const modelSelect = document.getElementById('model-select');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const processBtn = document.getElementById('process-btn');
+        const processingIndicator = document.getElementById('processing-indicator');
+        const progressBar = document.getElementById('progress-bar');
+        const resultContainer = document.getElementById('result-container');
+        const annotatedImage = document.getElementById('annotated-image');
+        const extractedText = document.getElementById('extracted-text');
+        const copyTextBtn = document.getElementById('copy-text-btn');
+        const copyTooltip = document.getElementById('copy-tooltip');
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-button');
+        const chatMessages = document.getElementById('chat-messages');
+        const exportCsvBtn = document.getElementById('export-csv-btn');
+        const headerExportCsvBtn = document.getElementById('header-export-csv-btn');
+
+        let selectedFile = null;
+        let selectedModel = null;
+        let currentJobId = null;
+
+        // Event Listeners
+        uploadArea.addEventListener('click', () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/png, image/jpeg, image/jpg';
+            fileInput.click();
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileUpload(e.target.files[0]);
+                }
+            });
+        });
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.border = '1px dashed #4CAF50';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.border = '1px dashed #ccc';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.border = '1px dashed #ccc';
+            if (e.dataTransfer.files.length > 0) {
+                handleFileUpload(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Copy extracted text functionality
+        copyTextBtn.addEventListener('click', () => {
+            copyToClipboard(extractedText.textContent);
+        });
+
+        // Model selection events
+        modelSelect.addEventListener('change', function() {
+            selectedModel = this.value;
+        });
+
+        // Modal overlay click to close
+        modalOverlay.addEventListener('click', function() {
+            hideModelSelection();
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            hideModelSelection();
+        });
+
+        processBtn.addEventListener('click', () => {
+            if (!selectedModel) {
+                alert('Please select an OCR model!');
+                return;
+            }
+            hideModelSelection();
+            processImage();
+        });
+
+        // Chat functionality
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Export CSV functionality
+        exportCsvBtn.addEventListener('click', async () => {
+            if (!currentJobId) {
+                alert('Please process an image first');
+                return;
+            }
+            
+            try {
+                window.location.href = `/export-csv/${currentJobId}`;
+            } catch (error) {
+                console.error('Error exporting CSV:', error);
+                alert('Error exporting CSV file');
+            }
+        });
+
+        headerExportCsvBtn.addEventListener('click', async () => {
+        if (!currentJobId) {
+            alert('Please process an image first');
+            return;
+        }
+        
+        try {
+            window.location.href = `/export-csv/${currentJobId}`;
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+            alert('Error exporting CSV file');
+        }
+        });
+
+        // Functions
+        function handleFileUpload(file) {
+            if (file.type.match('image/jpeg') || file.type.match('image/png')) {
+                selectedFile = file;
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    fileThumbnail.src = event.target.result;
+                    fileName.textContent = file.name;
+                    uploadedFilesContainer.classList.remove('hidden');
+                    
+                    // Show model selection dialog
+                    setTimeout(() => {
+                        showModelSelection();
+                    }, 500);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                alert('Only JPG, JPEG or PNG files are allowed!');
+            }
+        }
+
+        function showModelSelection() {
+            modalOverlay.style.display = 'block';
+            modelSelection.style.display = 'block';
+        }
+        
+        function hideModelSelection() {
+            modalOverlay.style.display = 'none';
+            modelSelection.style.display = 'none';
+        }
+
+        async function processImage() {
+            try {
+                processingIndicator.style.display = 'block';
+                progressBar.style.width = '0%';
+                
+                // Tạo FormData để upload hình ảnh
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                
+                // Step 1: Upload image
+                const uploadResponse = await fetch('/upload-image/', {
+                    method: 'POST',
+                    body: formData
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+                    }
+                    return response.json();
+                });
+                
+                console.log("Upload successful:", uploadResponse);
+                
+                // Step 2: Start processing
+                const response = await fetch('/process/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image_id: uploadResponse.image_id,
+                        model: selectedModel.toLowerCase()
+                    })
+                });
+
+                if (!response.ok) throw new Error('Processing request failed');
+                
+                const data = await response.json();
+                currentJobId = data.job_id; // Save the job ID
+                
+                console.log("Process started:", data);
+                
+                // Show processing indicator
+                pollJobStatus(currentJobId, 0);
+                
+                // After successful processing, show the export button
+                exportCsvBtn.style.display = 'flex';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                processingIndicator.style.display = 'none';
+                alert('An error occurred during processing: ' + error.message);
+            }
+        }
+
+        function pollJobStatus(jobId, progress) {
+            // Lưu jobId để sử dụng sau này
+            window.currentJobId = jobId;
+    
+            if (progress < 100) {
+            // Cập nhật progress bar
+                progressBar.style.width = `${progress}%`;
+                
+                // Kiểm tra trạng thái
+                fetch(`/status/${jobId}`)
+                .then(response => response.json())
+                .then(statusData => {
+                    if (statusData.status === 'completed') {
+                        // Hoàn thành
+                        progressBar.style.width = '100%';
+                        setTimeout(() => {
+                            processingIndicator.style.display = 'none';
+                            displayResults(statusData.result);
+                            
+                            // Hiển thị các nút Export CSV sau khi xử lý hoàn tất
+                            exportCsvBtn.style.display = 'flex';
+                            headerExportCsvBtn.style.display = 'flex';
+                        }, 500);
+                    } else if (statusData.status === 'failed') {
+                        // Lỗi
+                        progressBar.style.width = '100%';
+                        processingIndicator.style.display = 'none';
+                        alert('Processing failed: ' + (statusData.error || 'Unknown error'));
+                    } else {
+                        // Đang xử lý, tiếp tục polling
+                        setTimeout(() => {
+                            pollJobStatus(jobId, progress + 5);
+                        }, 500);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error polling status:', error);
+                    processingIndicator.style.display = 'none';
+                    alert('Error checking job status: ' + error.message);
+                });
+            }
+        }
+
+        function displayResults(results) {
+            resultContainer.classList.remove('hidden');
+            
+            // Lưu jobId hiện tại
+            const jobId = window.currentJobId;
+            console.log("Current job ID:", jobId);
+            
+            if (!jobId) {
+                console.error("No job ID available");
+                return;
+            }
+            
+            // Hiển thị ảnh có bounding box với timestamp để tránh cache
+            const imageUrl = `/annotated-image/${jobId}?t=${Date.now()}`;
+            console.log("Loading annotated image from:", imageUrl);
+            
+            // Thêm sự kiện để kiểm tra việc tải ảnh
+            annotatedImage.onload = function() {
+                console.log("Annotated image loaded successfully!");
+            };
+            
+            annotatedImage.onerror = function(e) {
+                console.error("Error loading annotated image:", e);
+                // Hiển thị ảnh lỗi hoặc thông báo
+                annotatedImage.alt = "Error loading annotated image. Please try again.";
+            };
+            
+            // Đặt src sau khi đã thiết lập sự kiện
+            annotatedImage.src = imageUrl;
+            
+            // Format và hiển thị extracted text
+            const textLines = results.map((item, index) => 
+                `${index + 1}. ${item.text}`
+            ).join('\n');
+            
+            extractedText.textContent = textLines;
+            
+            // Lưu text để sử dụng với GPT
+            window.extractedTextContent = textLines;
+        }
+
+
+        function showResults() {
+            // Display the image in the annotated image section
+            annotatedImage.src = fileThumbnail.src;
+            
+            // Display extracted text based on selected model
+            const modelText = {
+                'DocTR': 'Extracted text using DocTR model:\n\n1. Lorem ipsum dolor sit amet\n2. Consectetur adipiscing elit\n3. Sed do eiusmod tempor incididunt\n4. Ut labore et dolore magna aliqua\n5. Ut enim ad minim veniam\n6. Quis nostrud exercitation ullamco',
+                'TrOCR': 'Extracted text using TrOCR model:\n\nThe quick brown fox jumps over the lazy dog.\nLorem ipsum dolor sit amet, consectetur adipiscing elit.\nSed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\nUt enim ad minim veniam, quis nostrud exercitation ullamco laboris.',
+                'MMOCR': 'Extracted text using MMOCR model:\n\nSample text extracted by MMOCR\nThis is a demonstration\nOf the OCR capabilities\nMultiple lines of text\nCan be processed\nWith high accuracy'
+            };
+            
+            extractedText.textContent = modelText[selectedModel] || 'Text extraction complete.';
+            resultContainer.classList.remove('hidden');
+        }
+
+        function copyToClipboard(text) {
+            // Try the modern Navigator.clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopyTooltip();
+                }).catch(err => {
+                    console.error('Could not copy text with Clipboard API:', err);
+                    fallbackCopyTextToClipboard(text);
+                });
+            } else {
+                // Fall back to the older execCommand method
+                fallbackCopyTextToClipboard(text);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            // Create temporary textarea element
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            
+            // Select and copy text
+            textarea.select();
+            let successful = false;
+            try {
+                successful = document.execCommand('copy');
+            } catch (err) {
+                console.error('Error executing copy command:', err);
+            }
+            
+            // Remove temporary element
+            document.body.removeChild(textarea);
+            
+            if (successful) {
+                showCopyTooltip();
+            }
+        }
+
+        function showCopyTooltip() {
+            // Position the tooltip
+            const resultContent = document.querySelector('.result-content');
+            const rect = resultContent.getBoundingClientRect();
+            
+            copyTooltip.style.top = '10px';
+            copyTooltip.style.right = '10px';
+            copyTooltip.classList.add('show');
+            
+            // Hide tooltip after 2 seconds
+            setTimeout(() => {
+                copyTooltip.classList.remove('show');
+            }, 2000);
+        }
+
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (message !== '') {
+                // Add user message
+                addMessage(message, 'user');
+                
+                // Clear input
+                chatInput.value = '';
+                
+                // Check if we have extracted text
+                if (window.extractedTextContent) {
+                    // Send to GPT API
+                    fetch('/analyze-with-gpt/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            extracted_text: window.extractedTextContent,
+                            prompt: message
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Add GPT response
+                        addMessage(data.response, 'bot');
+                    })
+                    .catch(error => {
+                        console.error('Error calling GPT API:', error);
+                        addMessage('Sorry, I encountered an error while analyzing the text.', 'bot');
+                    });
+                } else {
+                    addMessage('Please extract text from an image first before asking questions.', 'bot');
+                }
+            }
+        }
+
+        // Trong phần addMessage của frontend.html
+        function addMessage(text, sender) {
+        if (!text || text.trim() === '') {
+            return;
+        }
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+        
+        if (sender === 'bot') {
+            // Xử lý văn bản để cải thiện định dạng Markdown và biểu tượng emoji
+            let processedText = text;
+            
+            // Đảm bảo thư viện marked đã được tải
+            if (window.marked) {
+                try {
+                    // Cấu hình Marked cho định dạng tốt hơn
+                    marked.setOptions({
+                        breaks: true,
+                        gfm: true,
+                        headerIds: true,
+                        mangle: false
+                    });
+                    
+                    // Xử lý emoji kèm theo text
+                    processedText = processEmojis(processedText);
+                    
+                    // Render Markdown
+                    const renderedMarkdown = marked.parse(processedText);
+                    
+                    messageDiv.innerHTML = `
+                        <div class="avatar bot-avatar">
+                            <img src="static/images/chatbot_icon.png" alt="Bot">
+                        </div>
+                        <div class="message-content markdown-content">${renderedMarkdown}</div>
+                    `;
+                } catch (e) {
+                    console.error('Error rendering markdown:', e);
+                    // Fallback nếu có lỗi
+                    messageDiv.innerHTML = `
+                        <div class="avatar bot-avatar">
+                            <img src="static/images/chatbot_icon.png" alt="Bot">
+                        </div>
+                        <div class="message-content">${text}</div>
+                    `;
+                }
+            } else {
+                // Nếu thư viện chưa tải, tải và thử lại
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+                script.onload = function() {
+                    marked.setOptions({
+                        breaks: true,
+                        gfm: true,
+                        headerIds: true,
+                        mangle: false
+                    });
+                    
+                    // Xử lý emoji kèm theo text
+                    processedText = processEmojis(processedText);
+                    
+                    const renderedMarkdown = marked.parse(processedText);
+                    messageDiv.innerHTML = `
+                        <div class="avatar bot-avatar">
+                            <img src="static/images/chatbot_icon.png" alt="Bot">
+                        </div>
+                        <div class="message-content markdown-content">${renderedMarkdown}</div>
+                    `;
+                    
+                    // Đảm bảo cuộn xuống sau khi render
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                };
+                document.head.appendChild(script);
+            }
+        } else {
+            // Tin nhắn người dùng không cần render Markdown
+            messageDiv.innerHTML = `
+                <div class="message-content">${text}</div>
+                <div class="avatar">U</div>
+            `;
+        }
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // Hàm xử lý emoji trong văn bản
+    function processEmojis(text) {
+        // Xử lý các mẫu emoji thường gặp
+        const emojiPatterns = [
+            // Thành phần
+            { regex: /^(🌟|💧|🧴|🛡️|🧘‍♀️)\s+(.+)$/gm, replacement: '<span class="emoji">$1</span> $2' },
+            // Loại da
+            { regex: /^(✅|⚠️|❌)\s+(.+)$/gm, replacement: '<span class="emoji">$1</span> $2' },
+            // Warnings
+            { regex: /^(⚠️|☀️|🧪|❌)\s+(.+)$/gm, replacement: '<span class="emoji">$1</span> $2' }
+        ];
+        
+        // Áp dụng các mẫu thay thế
+        let processedText = text;
+        emojiPatterns.forEach(pattern => {
+            processedText = processedText.replace(pattern.regex, pattern.replacement);
+        });
+        
+        return processedText;
+    }
+
+        // Hiển thị thông báo khi trang tải xong
+        window.addEventListener('load', function() {
+            // Xóa các tin nhắn mẫu nếu có
+            chatMessages.innerHTML = '';
+            
+            // Thêm tin nhắn chào mừng
+            const welcomeMessage = "Xin chào! Tôi là trợ lý phân tích thành phần mỹ phẩm. Hãy tải lên hình ảnh sản phẩm để tôi giúp bạn nhận dạng và phân tích thành phần.";
+            addMessage(welcomeMessage, 'bot');
+            
+            // Ẩn các nút Export CSV
+            headerExportCsvBtn.style.display = 'none';
+            exportCsvBtn.style.display = 'none';
+        });
+
+// Hiển thị tin nhắn chào mừng khi trang tải xong
+document.addEventListener('DOMContentLoaded', function() {
+    // Xóa các tin nhắn mẫu nếu có
+    chatMessages.innerHTML = '';
+    
+    // Thêm tin nhắn chào mừng
+    const welcomeMessage = "Xin chào! Tôi là trợ lý phân tích thành phần mỹ phẩm. Hãy tải lên hình ảnh sản phẩm để tôi giúp bạn nhận dạng và phân tích thành phần.";
+    addMessage(welcomeMessage, 'bot');
+    
+    // Ẩn các nút Export CSV
+    headerExportCsvBtn.style.display = 'none';
+    exportCsvBtn.style.display = 'none';
+});
+</script>
+</body>
+</html>
+``` 

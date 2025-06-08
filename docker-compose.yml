@@ -1,0 +1,188 @@
+services:
+  # Redis service for caching and message passing
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - ocr-network
+
+  # Image preprocessing service
+  preprocessing:
+    build:
+      context: ./preprocessing
+      dockerfile: Dockerfile
+    volumes:
+      - ./preprocessing:/app
+      - ./shared:/shared
+    environment:
+      - REDIS_HOST=redis
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - ocr-network
+
+  # DocTR OCR service
+  doctr:
+    build:
+      context: ./doctr
+      dockerfile: Dockerfile
+    volumes:
+      - ./doctr:/app
+      - ./shared:/shared
+    environment:
+      - REDIS_HOST=redis
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+      - CUDA_LAUNCH_BLOCKING=1
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - ocr-network
+
+  # TrOCR service
+  trocr:
+    build:
+      context: ./trocr
+      dockerfile: Dockerfile
+    volumes:
+      - ./trocr:/app
+      - ./shared:/shared
+    environment:
+      - REDIS_HOST=redis
+      - CUDA_VISIBLE_DEVICES=""  # Force CPU
+      - OMP_NUM_THREADS=4       # Giới hạn CPU threads
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    networks:
+      - ocr-network
+
+  # MMOCR service
+  mmocr:
+    build:
+      context: ./mmocr
+      dockerfile: Dockerfile
+    volumes:
+      - ./mmocr:/app
+      - ./shared:/shared
+    environment:
+      - REDIS_HOST=redis
+      - CUDA_VISIBLE_DEVICES=""  # Force CPU
+      - OMP_NUM_THREADS=4  
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    networks:
+      - ocr-network
+
+  # API service with FastAPI
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api:/app
+      - ./shared:/shared
+      - ./frontend.html:/app/frontend.html
+    depends_on:
+      redis:
+        condition: service_healthy
+      preprocessing:
+        condition: service_healthy
+      doctr:
+        condition: service_healthy
+      trocr:
+        condition: service_healthy
+      mmocr:
+        condition: service_healthy
+    restart: always
+    environment:
+      - REDIS_HOST=redis
+      - PREPROCESSING_URL=http://preprocessing:5000
+      - DOCTR_URL=http://doctr:5001
+      - TROCR_URL=http://trocr:5002
+      - MMOCR_URL=http://mmocr:5003
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - ocr-network
+
+volumes:
+  redis-data:
+
+networks:
+  ocr-network:
+    driver: bridge
