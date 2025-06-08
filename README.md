@@ -196,6 +196,10 @@ make check-redis
 5. **AI Analysis**: Chat with GPT to analyze ingredients and get recommendations
 6. **Export**: Download results as CSV for further analysis
 
+## 👥 Contributors
+- Nguyen Hoang Anh Tuan
+- Hoang Thanh Lam
+- Nguyen Tran Thang
 
 ## 🙏 Acknowledgments
 
