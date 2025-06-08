@@ -206,4 +206,6 @@ make check-redis
 - [REMBG](https://github.com/danielgatis/rembg) for background removal
 - OpenAI for GPT integration
 
-**Note**: This system is designed for cosmetic ingredient analysis but can be adapted for other OCR use cases by modifying the GPT prompts and analysis logic.
+---
+
+**Note**: This project is for educational purposes. The system is designed for cosmetic ingredient analysis but can be adapted for other OCR use cases by modifying the GPT prompts and analysis logic.
